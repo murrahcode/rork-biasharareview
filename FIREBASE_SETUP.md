@@ -170,12 +170,11 @@ Click **Publish** to save the rules.
 Create a `.env` file in your project root:
 
 \`\`\`env
-EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyD4cpvDczk-yw4sWgFkPjGdgJShxDVk0nw
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=biasharareview-production.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=biasharareview-production
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=biasharareview-production.firebasestorage.app
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1005001835023
-EXPO_PUBLIC_FIREBASE_APP_ID=1:1005001835023:web:74111536e19f6856dc597a
+EXPO_PUBLIC_FIREBASE_API_KEY=
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+EXPO_PUBLIC_FIREBASE_APP_ID=
 \`\`\`
 
 Replace the values with your actual Firebase config values.
