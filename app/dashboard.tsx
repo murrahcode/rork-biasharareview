@@ -80,8 +80,10 @@ export default function DashboardScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await logout();
-            router.replace('/auth/login');
+            setTimeout(async () => {
+              await logout();
+            }, 300);
+            router.replace('/(tabs)');
           },
         },
       ]

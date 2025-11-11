@@ -20,6 +20,7 @@ import Colors from '@/constants/colors';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -45,14 +46,24 @@ export default function SignupScreen() {
     redirectUri,
   });
 
-  const handleGoogleSignup = useCallback(async (idToken: string) => {
+  const handleGoogleSignup = useCallback(async () => {
     setIsSocialLoading(true);
     try {
-      const success = await loginWithGoogle(idToken);
-      if (success) {
-        router.replace('/(tabs)');
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+
+      const result = await GoogleSignin.signIn();
+
+      if (result.type === "success") {
+        const success = await loginWithGoogle(result);
+        if (success) {
+          router.replace("/(tabs)");
+        } else {
+          Alert.alert("Error", "Google login failed. Please try again.");
+        }
       } else {
-        Alert.alert('Error', 'Google signup failed. Please try again.');
+        Alert.alert("Error", "Google login failed. Please try again.");
       }
     } catch (error) {
       console.error('Google signup error:', error);
@@ -61,13 +72,6 @@ export default function SignupScreen() {
       setIsSocialLoading(false);
     }
   }, [loginWithGoogle]);
-
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { id_token } = googleResponse.params;
-      handleGoogleSignup(id_token);
-    }
-  }, [googleResponse, handleGoogleSignup]);
 
   const validateInputs = (): boolean => {
     if (!fullName.trim()) {
@@ -114,11 +118,15 @@ export default function SignupScreen() {
     setIsLoading(false);
 
     if (result.success) {
-      Alert.alert(
-        'Success', 
-        'Account created successfully!',
-        [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
-      );
+      Alert.alert("Success", "Account created successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            router.dismissAll();
+            router.push("/(tabs)");
+          },
+        },
+      ]);
     } else {
       Alert.alert('Error', result.message || 'Signup failed. Please try again.');
     }
@@ -236,8 +244,8 @@ export default function SignupScreen() {
           ) : (
             <TouchableOpacity 
               style={[styles.socialButton, styles.googleButton]}
-              onPress={() => googlePromptAsync()}
-              disabled={!googleRequest}
+              onPress={() => handleGoogleSignup()}
+              disabled={isSocialLoading}
             >
               <View style={styles.socialIconContainer}>
                 <Text style={styles.googleIcon}>G</Text>
