@@ -38,11 +38,8 @@ export default function RootLayout() {
   useEffect(() => {
     async function initializeApp() {
       try {
-        console.log('[App] Starting initialization...');
         await SplashScreen.hideAsync();
-        console.log('[App] Splash screen hidden');
         setIsReady(true);
-        console.log('[App] App is ready');
       } catch (error) {
         console.error('[App] Initialization error:', error);
         await SplashScreen.hideAsync();
@@ -54,7 +51,6 @@ export default function RootLayout() {
   }, []);
 
   if (!isReady) {
-    console.log('[App] Rendering loading screen...');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -62,8 +58,6 @@ export default function RootLayout() {
       </View>
     );
   }
-
-  console.log('[App] Rendering main app...');
 
   return (
     <ErrorBoundary>
