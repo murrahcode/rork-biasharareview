@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Colors from '@/constants/colors';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { makeRedirectUri } from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -43,14 +43,24 @@ export default function LoginScreen() {
     redirectUri,
   });
 
-  const handleGoogleLogin = useCallback(async (idToken: string) => {
+  const handleGoogleLogin = useCallback(async () => {
     setIsSocialLoading(true);
     try {
-      const success = await loginWithGoogle(idToken);
-      if (success) {
-        router.replace('/(tabs)');
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+
+      const result = await GoogleSignin.signIn();
+
+      if (result.type === "success") {
+        const success = await loginWithGoogle(result);
+        if (success) {
+          router.replace("/(tabs)");
+        } else {
+          Alert.alert("Error", "Google login failed. Please try again.");
+        }
       } else {
-        Alert.alert('Error', 'Google login failed. Please try again.');
+        Alert.alert("Error", "Google login failed. Please try again.");
       }
     } catch (error) {
       console.error('Google login error:', error);
@@ -60,13 +70,6 @@ export default function LoginScreen() {
     }
   }, [loginWithGoogle]);
 
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { id_token } = googleResponse.params;
-      handleGoogleLogin(id_token);
-    }
-  }, [googleResponse, handleGoogleLogin]);
-
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -75,12 +78,15 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     const success = await login(email, password);
-    setIsLoading(false);
 
     if (success) {
-      router.replace('/dashboard');
+      setTimeout(() => {
+        setIsLoading(false);
+        router.dismissAll();
+        router.replace("/dashboard");
+      }, 500);
     } else {
-      Alert.alert('Error', 'Invalid email or password. Please try again.');
+      Alert.alert("Error", "Invalid email or password. Please try again.");
     }
   };
 
@@ -199,8 +205,8 @@ export default function LoginScreen() {
           ) : (
             <TouchableOpacity 
               style={[styles.socialButton, styles.googleButton]}
-              onPress={() => googlePromptAsync()}
-              disabled={!googleRequest}
+              onPress={() => handleGoogleLogin()}
+              disabled={isSocialLoading}
             >
               <View style={styles.socialIconContainer}>
                 <Text style={styles.googleIcon}>G</Text>

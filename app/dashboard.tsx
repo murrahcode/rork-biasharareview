@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import {
   Star,
   MessageSquare,
@@ -20,9 +21,12 @@ export default function DashboardScreen() {
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState<boolean>(true);
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef<boolean>(false);
+  isFocusedRef.current = isFocused;
 
   useEffect(() => {
-    if (!isAuthenticated && !authLoading) {
+    if (isFocusedRef.current && !isAuthenticated && !authLoading) {
       Alert.alert(
         'Sign In Required',
         'Please sign in to access your dashboard.',
@@ -51,7 +55,7 @@ export default function DashboardScreen() {
           try {
             const reviews = await getReviews(entity.id);
             allReviews.push(...reviews.filter(r => r.userId === user.id));
-          } catch (error) {
+          } catch {
             console.log(`No reviews found for entity ${entity.id}`);
           }
         }
@@ -80,8 +84,10 @@ export default function DashboardScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await logout();
-            router.replace('/auth/login');
+            setTimeout(async () => {
+              await logout();
+            }, 300);
+            router.replace('/(tabs)');
           },
         },
       ]

@@ -15,6 +15,8 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { User } from '@/types';
+import { GoogleSignin, SignInSuccessResponse } from '@react-native-google-signin/google-signin';
+// import { IOS_CLIENT_ID } from '@/constants/credentials';
 
 const defaultNotificationSettings = {
   reviewLikes: true,
@@ -28,14 +30,21 @@ export const [AuthContext, useAuth] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
 
+  useEffect(() => {
+    GoogleSignin.configure({
+      // iosClientId: IOS_CLIENT_ID,
+      webClientId: '1005001835023-euem3vlgb5q1ieb2d0nnohpi3917oq7p.apps.googleusercontent.com',
+    });
+  }, []);
+
   const syncUserWithBackend = useCallback(async (fbUser: FirebaseUser) => {
     try {
       console.log('[AuthContext] Syncing user with backend:', fbUser.uid);
       const result = await trpcClient.auth.syncUser.mutate({
         uid: fbUser.uid,
-        displayName: fbUser.displayName || undefined,
+        displayName: fbUser.displayName || '',
         email: fbUser.email || '',
-        photoURL: fbUser.photoURL || undefined,
+        photoURL: fbUser.photoURL || '',
       });
       console.log('[AuthContext] User sync result:', result);
       return result.success;
@@ -89,7 +98,7 @@ export const [AuthContext, useAuth] = createContextHook(() => {
             id: userId,
             name: fbUser.displayName || 'User',
             email: fbUser.email || '',
-            avatar: fbUser.photoURL || undefined,
+            avatar: fbUser.photoURL || null,
             favorites: [],
             reviewsCount: 0,
             isEntityOwner: false,
@@ -116,7 +125,7 @@ export const [AuthContext, useAuth] = createContextHook(() => {
           id: userId,
           name: fbUser.displayName || 'User',
           email: fbUser.email || '',
-          avatar: fbUser.photoURL || undefined,
+          avatar: fbUser.photoURL || null,
           favorites: [],
           reviewsCount: 0,
           isEntityOwner: false,
@@ -184,6 +193,8 @@ export const [AuthContext, useAuth] = createContextHook(() => {
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+
+      setIsLoading(true);
       return true;
     } catch (error) {
       console.error('Login failed:', error);
@@ -199,7 +210,7 @@ export const [AuthContext, useAuth] = createContextHook(() => {
         id: credential.user.uid,
         name,
         email,
-        avatar: undefined,
+        avatar: null,
         favorites: [],
         reviewsCount: 0,
         isEntityOwner: false,
@@ -216,7 +227,7 @@ export const [AuthContext, useAuth] = createContextHook(() => {
         id: credential.user.uid,
         name,
         email,
-        avatar: undefined,
+        avatar: null,
         favorites: [],
         reviewsCount: 0,
         isEntityOwner: false,
@@ -241,18 +252,31 @@ export const [AuthContext, useAuth] = createContextHook(() => {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async (idToken: string): Promise<boolean> => {
+  const loginWithGoogle = useCallback(async (result: SignInSuccessResponse): Promise<boolean> => {
     try {
+      // First, authenticate with Firebase using Google ID token
+      const idToken = result.data.idToken;
+      if (!idToken) {
+        console.error('Google login failed: No ID token received');
+        return false;
+      }
+
+      // Create Firebase credential and sign in
       const credential = GoogleAuthProvider.credential(idToken);
-      const result = await signInWithCredential(auth, credential);
+      const firebaseAuthResult = await signInWithCredential(auth, credential);
+      const firebaseUser = firebaseAuthResult.user;
+      const firebaseUserId = firebaseUser.uid;
+
+      // Now use Firebase UID (not Google user ID) for Firestore operations
+      const googleUser = result.data.user;
+      let userDoc = await getDoc(doc(db, 'users', firebaseUserId));
       
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       if (!userDoc.exists()) {
         const newUser: any = {
-          id: result.user.uid,
-          name: result.user.displayName || 'User',
-          email: result.user.email || '',
-          avatar: result.user.photoURL || undefined,
+          id: firebaseUserId,
+          name: googleUser.name || firebaseUser.displayName || 'User',
+          email: googleUser.email || firebaseUser.email || '',
+          avatar: googleUser.photo || firebaseUser.photoURL || null,
           favorites: [],
           reviewsCount: 0,
           isEntityOwner: false,
@@ -264,9 +288,11 @@ export const [AuthContext, useAuth] = createContextHook(() => {
           showActivity: true,
           notificationSettings: defaultNotificationSettings,
         };
-        await setDoc(doc(db, 'users', result.user.uid), newUser);
+        await setDoc(doc(db, 'users', firebaseUserId), newUser);
+        userDoc = await getDoc(doc(db, 'users', firebaseUserId));
       }
-      await loadUserProfile(result.user.uid, result.user);
+      
+      await loadUserProfile(firebaseUserId, firebaseUser);
       return true;
     } catch (error) {
       console.error('Google login failed:', error);
