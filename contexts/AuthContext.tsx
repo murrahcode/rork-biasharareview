@@ -15,7 +15,7 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { User } from '@/types';
-import { GoogleSignin, SignInSuccessResponse } from '@react-native-google-signin/google-signin';
+import { safeGoogleSignin, SignInSuccessResponse } from '@/lib/googleSignIn';
 // import { IOS_CLIENT_ID } from '@/constants/credentials';
 
 const defaultNotificationSettings = {
@@ -31,10 +31,13 @@ export const [AuthContext, useAuth] = createContextHook(() => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
 
   useEffect(() => {
-    GoogleSignin.configure({
-      // iosClientId: IOS_CLIENT_ID,
-      webClientId: '1005001835023-euem3vlgb5q1ieb2d0nnohpi3917oq7p.apps.googleusercontent.com',
-    });
+    // Only configure Google Sign-In if not running in Expo Go
+    if (safeGoogleSignin.isAvailable) {
+      safeGoogleSignin.configure({
+        // iosClientId: IOS_CLIENT_ID,
+        webClientId: '1005001835023-euem3vlgb5q1ieb2d0nnohpi3917oq7p.apps.googleusercontent.com',
+      });
+    }
   }, []);
 
   const syncUserWithBackend = useCallback(async (fbUser: FirebaseUser) => {

@@ -18,9 +18,9 @@ import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors from '@/constants/colors';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { makeRedirectUri } from 'expo-auth-session';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { safeGoogleSignin } from '@/lib/googleSignIn';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,25 +32,22 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const { login, loginWithGoogle, resetPassword } = useAuth();
 
-  const redirectUri = makeRedirectUri({
-    scheme: 'biasharareview',
-  });
-
-  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    webClientId: '205177317563-gv2forq3l2opsdah5rnb1dnenek61hog.apps.googleusercontent.com',
-    iosClientId: '205177317563-47ku4ebvr62arcm7nh0rrd6rk0h1ubi2.apps.googleusercontent.com',
-    androidClientId: '205177317563-0965p1albqj3uvs8uvtu16e1i4lv7jqh.apps.googleusercontent.com',
-    redirectUri,
-  });
+  // Check if running in Expo Go - Google Sign-In doesn't work in Expo Go
+  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
   const handleGoogleLogin = useCallback(async () => {
+    if (!safeGoogleSignin.isAvailable) {
+      Alert.alert('Error', 'Google Sign-In is not available in Expo Go. Please use a development build.');
+      return;
+    }
+
     setIsSocialLoading(true);
     try {
-      await GoogleSignin.hasPlayServices({
+      await safeGoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
 
-      const result = await GoogleSignin.signIn();
+      const result = await safeGoogleSignin.signIn();
 
       if (result.type === "success") {
         const success = await loginWithGoogle(result);
@@ -192,27 +189,31 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {isSocialLoading ? (
-            <View style={styles.socialLoadingContainer}>
-              <ActivityIndicator size="large" color={Colors.light.primary} />
-            </View>
-          ) : (
-            <TouchableOpacity 
-              style={[styles.socialButton, styles.googleButton]}
-              onPress={() => handleGoogleLogin()}
-              disabled={isSocialLoading}
-            >
-              <View style={styles.socialIconContainer}>
-                <Text style={styles.googleIcon}>G</Text>
+          {!isExpoGo && (
+            <>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
               </View>
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+
+              {isSocialLoading ? (
+                <View style={styles.socialLoadingContainer}>
+                  <ActivityIndicator size="large" color={Colors.light.primary} />
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.socialButton, styles.googleButton]}
+                  onPress={() => handleGoogleLogin()}
+                  disabled={isSocialLoading}
+                >
+                  <View style={styles.socialIconContainer}>
+                    <Text style={styles.googleIcon}>G</Text>
+                  </View>
+                  <Text style={styles.socialButtonText}>Continue with Google</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
 
           <View style={styles.footer}>
