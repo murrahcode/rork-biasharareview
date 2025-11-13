@@ -14,8 +14,7 @@ import { Star, Camera, X, Calendar } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { mockEntities } from '@/mocks/entities';
 import { useAuth } from '@/contexts/AuthContext';
-import { saveReview } from '@/lib/firebaseService';
-import { Review } from '@/types';
+import { trpc } from '@/lib/trpc';
 import Colors from '@/constants/colors';
 
 export default function SubmitReviewScreen() {
@@ -30,6 +29,8 @@ export default function SubmitReviewScreen() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const entity = mockEntities.find(e => e.id === entityId);
+  
+  const submitReviewMutation = trpc.reviews.submit.useMutation();
 
   const pickImage = async () => {
     if (photos.length >= 3) {
@@ -98,28 +99,20 @@ export default function SubmitReviewScreen() {
     setIsSubmitting(true);
     
     try {
-      const newReview: Review = {
-        id: `review_${Date.now()}_${user.id}`,
+      const result = await submitReviewMutation.mutateAsync({
         entityId: entityId || '',
-        userId: user.id,
-        userName: user.name,
-        userAvatar: user.avatar,
         rating,
         reviewText: reviewText.trim(),
         dateOfExperience,
-        createdAt: new Date().toISOString(),
         photoUrls: photos,
-        isVerified: true,
-        likes: 0,
-        reports: 0,
-      };
+      });
 
-      await saveReview(newReview);
+      console.log('Review submitted:', result.reviewId);
 
       setIsSubmitting(false);
       Alert.alert(
         'Review Published!',
-        'Thank you for your review. It has been published successfully.',
+        'Your review has been published and is being checked by our moderation system.',
         [
           {
             text: 'OK',

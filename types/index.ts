@@ -46,6 +46,9 @@ export interface Review {
   isVerified: boolean;
   likes: number;
   reports: number;
+  moderationStatus: 'published' | 'pending' | 'hidden';
+  moderationFlags?: string[];
+  moderationCheckedAt?: string;
 }
 
 export interface User {
