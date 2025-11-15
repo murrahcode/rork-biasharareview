@@ -31,13 +31,18 @@ export default function HomeScreen() {
     .sort((a, b) => b.biasharaScore - a.biasharaScore)
     .slice(0, 3);
 
-  const filteredEntities = searchQuery
-    ? mockEntities.filter(
-        (entity) =>
-          entity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          entity.location.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : mockEntities;
+  const filteredEntities = mockEntities.filter((entity) => {
+    const matchesSearch = searchQuery
+      ? entity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entity.location.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+
+    const matchesCategory = selectedCategory
+      ? entity.category === categories.find((c) => c.id === selectedCategory)?.name
+      : true;
+
+    return matchesSearch && matchesCategory;
+  });
 
   const renderTrendingCard = (entity: typeof mockEntities[0]) => (
     <TouchableOpacity
@@ -128,11 +133,12 @@ export default function HomeScreen() {
                 styles.categoryChip,
                 selectedCategory === category.id && styles.categoryChipActive,
               ]}
-              onPress={() =>
+              onPress={() => {
                 setSelectedCategory(
                   selectedCategory === category.id ? null : category.id
-                )
-              }
+                );
+              }}
+              activeOpacity={0.7}
             >
               <Text style={styles.categoryIcon}>{category.icon}</Text>
               <Text
