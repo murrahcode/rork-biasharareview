@@ -277,8 +277,8 @@ export default function EntityDetailScreen() {
               </TouchableOpacity>
             )}
             
-            {entity.isClaimed ? (
-              <View style={styles.claimedActionRow}>
+            {entity.isClaimed && (
+              <>
                 <TouchableOpacity
                   style={[styles.chatButton, isCreatingChat && styles.buttonDisabled]}
                   onPress={handleChatWithBusiness}
@@ -296,8 +296,10 @@ export default function EntityDetailScreen() {
                   <MessageSquare size={20} color="#FFFFFF" />
                   <Text style={styles.writeReviewText}>Write Review</Text>
                 </TouchableOpacity>
-              </View>
-            ) : (
+              </>
+            )}
+            
+            {!entity.isClaimed && (
               <TouchableOpacity
                 style={styles.writeReviewButtonFull}
                 onPress={() => router.push(`/review/submit?entityId=${entity.id}` as any)}
@@ -495,13 +497,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.light.primary,
+    backgroundColor: Colors.light.success,
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     gap: 8,
-  },
-  writeReviewButtonSecondary: {
-    flex: 1,
   },
   writeReviewText: {
     fontSize: 16,
@@ -673,18 +673,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light.muted,
   },
-  claimedActionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   chatButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.light.secondary,
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     gap: 8,
   },
   chatButtonText: {
@@ -696,9 +692,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.light.primary,
+    backgroundColor: Colors.light.success,
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     gap: 8,
   },
   buttonDisabled: {
