@@ -24,17 +24,20 @@ import {
   Facebook,
   Twitter,
   ShieldCheck,
+  Send,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { mockEntities } from '@/mocks/entities';
 import { mockReviews } from '@/mocks/reviews';
 import { useAuth } from '@/contexts/AuthContext';
+import { trpcClient } from '@/lib/trpc';
 import Colors from '@/constants/colors';
 
 export default function EntityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user, toggleFavorite } = useAuth();
+  const { user, toggleFavorite, isAuthenticated } = useAuth();
   const [showAllReviews, setShowAllReviews] = useState<boolean>(false);
+  const [isCreatingChat, setIsCreatingChat] = useState<boolean>(false);
 
   const entity = mockEntities.find(e => e.id === id);
   const entityReviews = mockReviews.filter(r => r.entityId === id);
@@ -66,6 +69,36 @@ export default function EntityDetailScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     toggleFavorite(entity.id);
+  };
+
+  const handleChatWithBusiness = async () => {
+    if (!isAuthenticated || !user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (!entity.isClaimed) {
+      return;
+    }
+
+    setIsCreatingChat(true);
+
+    try {
+      const result = await trpcClient.chat.create.mutate({
+        entityId: entity.id,
+        entityName: entity.name,
+        userId: user.id,
+        userName: user.name,
+      });
+
+      if (result.success && result.chatId) {
+        router.push(`/chat/${result.chatId}` as any);
+      }
+    } catch (error) {
+      console.error('Failed to create chat:', error);
+    } finally {
+      setIsCreatingChat(false);
+    }
   };
 
   const renderStars = (rating: number, size: number = 16) => {
@@ -244,14 +277,44 @@ export default function EntityDetailScreen() {
               </TouchableOpacity>
             )}
             
-            <TouchableOpacity
-              style={[styles.writeReviewButton, !entity.isClaimed && styles.writeReviewButtonSecondary]}
-              onPress={() => router.push(`/review/submit?entityId=${entity.id}` as any)}
-            >
-              <MessageSquare size={20} color="#FFFFFF" />
-              <Text style={styles.writeReviewText}>Write a Review</Text>
-            </TouchableOpacity>
+            {entity.isClaimed ? (
+              <View style={styles.claimedActionRow}>
+                <TouchableOpacity
+                  style={[styles.chatButton, isCreatingChat && styles.buttonDisabled]}
+                  onPress={handleChatWithBusiness}
+                  disabled={isCreatingChat}
+                >
+                  <Send size={20} color="#FFFFFF" />
+                  <Text style={styles.chatButtonText}>
+                    {isCreatingChat ? 'Opening...' : 'Chat with Business'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.writeReviewButton}
+                  onPress={() => router.push(`/review/submit?entityId=${entity.id}` as any)}
+                >
+                  <MessageSquare size={20} color="#FFFFFF" />
+                  <Text style={styles.writeReviewText}>Write Review</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.writeReviewButtonFull}
+                onPress={() => router.push(`/review/submit?entityId=${entity.id}` as any)}
+              >
+                <MessageSquare size={20} color="#FFFFFF" />
+                <Text style={styles.writeReviewText}>Write a Review</Text>
+              </TouchableOpacity>
+            )}
           </View>
+          
+          {!entity.isClaimed && (
+            <View style={styles.chatUnavailable}>
+              <Text style={styles.chatUnavailableText}>
+                Chat unavailable – business not claimed
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.reviewsSection}>
@@ -609,5 +672,48 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: Colors.light.muted,
+  },
+  claimedActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  chatButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.secondary,
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
+  chatButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+  },
+  writeReviewButtonFull: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  chatUnavailable: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: `${Colors.light.muted}15`,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  chatUnavailableText: {
+    fontSize: 13,
+    color: Colors.light.muted,
+    textAlign: 'center',
   },
 });

@@ -4,6 +4,9 @@ import syncUserRoute from "./routes/auth/sync-user/route";
 import submitReviewRoute from "./routes/reviews/submit-review/route";
 import calculateRatingsRoute from "./routes/reviews/calculate-ratings/route";
 import moderateReviewRoute from "./routes/reviews/moderate-review/route";
+import createChatRoute from "./routes/chat/create-chat/route";
+import sendMessageRoute from "./routes/chat/send-message/route";
+import markReadRoute from "./routes/chat/mark-read/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -16,6 +19,11 @@ export const appRouter = createTRPCRouter({
     submit: submitReviewRoute,
     calculateRatings: calculateRatingsRoute,
     moderate: moderateReviewRoute,
+  }),
+  chat: createTRPCRouter({
+    create: createChatRoute,
+    sendMessage: sendMessageRoute,
+    markRead: markReadRoute,
   }),
 });
 

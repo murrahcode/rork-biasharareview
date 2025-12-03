@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
+import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import {
   Star,
   MessageSquare,
@@ -10,17 +12,20 @@ import {
   Mail,
   Edit,
   Users,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { mockEntities } from '@/mocks/entities';
 import { getReviews } from '@/lib/firebaseService';
-import { Review } from '@/types';
+import { Review, Chat } from '@/types';
 import Colors from '@/constants/colors';
 
 export default function DashboardScreen() {
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState<boolean>(true);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
   const isFocused = useIsFocused();
   const isFocusedRef = useRef<boolean>(false);
   isFocusedRef.current = isFocused;
@@ -69,6 +74,49 @@ export default function DashboardScreen() {
     };
 
     loadUserReviews();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.ownedEntityIds || user.ownedEntityIds.length === 0) return;
+
+    const chatsRef = collection(db, 'chats');
+    const q = query(
+      chatsRef,
+      where('entityId', 'in', user.ownedEntityIds),
+      orderBy('lastMessageAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const loadedChats = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            entityId: data.entityId,
+            entityName: data.entityName,
+            userId: data.userId,
+            userName: data.userName,
+            lastMessage: data.lastMessage,
+            lastMessageAt: data.lastMessageAt
+              ? (data.lastMessageAt as Timestamp).toDate().toISOString()
+              : undefined,
+            unreadCount: data.unreadCount || 0,
+            createdAt: data.createdAt
+              ? (data.createdAt as Timestamp).toDate().toISOString()
+              : new Date().toISOString(),
+          } as Chat;
+        });
+        setChats(loadedChats);
+        const unread = loadedChats.reduce((acc, chat) => acc + chat.unreadCount, 0);
+        setUnreadChatCount(unread);
+      },
+      (error) => {
+        console.error('Error loading chats:', error);
+      }
+    );
+
+    return () => unsubscribe();
   }, [user]);
 
   const handleLogout = async () => {
